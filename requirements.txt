@@ -10,3 +10,4 @@ httpx==0.28.1
 typing-extensions==4.16.0
 dataclasses-json==0.6.7
 pytest==9.1.1
+pytest-asyncio==0.21.0
