@@ -95,6 +95,9 @@ class SwarmOrchestrator:
         for agent_id in self.agents:
             await self.start_agent(agent_id)
 
+        # Yield to the event loop so started agent tasks initialize
+        await asyncio.sleep(0)
+
         self.monitoring_task = asyncio.create_task(self._monitor_agents())
 
     async def stop_swarm(self):

@@ -189,7 +189,11 @@ async def test_swarm_start_and_stop_lifecycle():
     assert swarm.monitoring_task is not None
     assert not swarm.monitoring_task.done()
 
-    # Agent should be running now
+    # Agent should be running now (give tasks a moment to ensure deterministic state transition)
+    for _ in range(50):
+        if a1.state == AgentState.RUNNING:
+            break
+        await asyncio.sleep(0.01)
     assert a1.state == AgentState.RUNNING
 
     # Stop swarm
