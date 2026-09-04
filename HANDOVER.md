@@ -68,6 +68,12 @@ What was done
    - Replaced deprecated `asyncio.get_event_loop().time()` with `time.time()` in `agentic_os.py`.
    - Added `tests/test_agentic_os.py` (4 tests) covering `AgenticOS` lifecycle, custom agents, task submission, and parallel tasks.
    - Expanded tests across `test_parallel_engine.py`, `test_swarm_orchestrator.py`, `test_communication.py`, and `test_agent_base.py`.
+19. Cross-Python CI Matrix & Async Lifecycle Robustness (suite expanded to 56 tests):
+   - Added `await asyncio.sleep(0)` to `SwarmOrchestrator.start_agent()` and `start_swarm()` ensuring background agent tasks yield and reach `AgentState.RUNNING` deterministically across Python 3.11 and 3.12.
+   - Protected `BaseAgent.start()` against unhandled exceptions during `initialize()`, transitioning to `AgentState.FAILED` and emitting `"agent_failed"`.
+   - Set `fail-fast: false` in `.github/workflows/ci.yml` matrix strategy for resilient multi-version test diagnostics.
+   - Added unit tests for initialization failures in `test_agent_base.py` and `test_swarm_orchestrator.py` (total 56 passed tests, 0 warnings).
+   - Ignored `uv.lock` in `.gitignore`.
 
 Files changed/added
 -------------------
