@@ -293,13 +293,13 @@ def submit_video(video_url, language="en"):
     }
     
     print(f"🎬 Submitting video: {video_url}")
-        response = requests.post(endpoint, headers=get_headers(), json=payload)
-        response.raise_for_status()
-    
+    response = requests.post(endpoint, headers=get_headers(), json=payload)
+    response.raise_for_status()
+
     data = response.json()
     task_id = data.get('id')
     print(f"✅ Task created: {task_id}")
-        
+
     return data
 
 
@@ -308,14 +308,14 @@ def poll_task_completion(task_id):
     STEP 2: Poll until video processing is complete
     """
     endpoint = f"{API_URL}/tasks/{task_id}"
-    
+
     print(f"⏳ Polling for task completion...", end='', flush=True)
-    
+
     for attempt in range(MAX_TASK_POLLS):
-            response = requests.get(endpoint, headers=get_headers())
-            response.raise_for_status()
-        
-            data = response.json()
+        response = requests.get(endpoint, headers=get_headers())
+        response.raise_for_status()
+
+        data = response.json()
         status = data.get('status', '')
             
         if status in ['success', 'complete', 'ready']:
