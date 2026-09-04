@@ -12,3 +12,4 @@ concurrent.futures
 logging
 typing-extensions
 dataclasses-json
+pytest
