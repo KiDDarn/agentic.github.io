@@ -141,3 +141,27 @@ async def test_agent_pause_resume_running_lifecycle():
     await agent.stop()
     await asyncio.wait_for(run_task, timeout=1.0)
     assert agent.state == AgentState.TERMINATED
+
+
+@pytest.mark.asyncio
+async def test_agent_initialization_failure():
+    class FailingInitAgent(SampleAgent):
+        async def initialize(self):
+            raise ValueError("Init failed")
+
+    agent = FailingInitAgent(name="FailingInit")
+    events = []
+
+    def failure_handler(ag, event, data):
+        events.append((event, data))
+
+    agent.register_event_handler("agent_failed", failure_handler)
+
+    run_task = asyncio.create_task(agent.start())
+    await asyncio.sleep(0.01)
+
+    assert agent.state == AgentState.FAILED
+    assert len(events) == 1
+    assert events[0][0] == "agent_failed"
+    assert "Init failed" in events[0][1]["error"]
+    assert run_task.done()

@@ -75,7 +75,14 @@ class BaseAgent(ABC):
 
     async def start(self):
         self.state = AgentState.RUNNING
-        await self.initialize()
+        try:
+            await self.initialize()
+        except Exception as e:
+            self.state = AgentState.FAILED
+            self.logger.error(f"Agent {self.name} failed to initialize: {e}")
+            await self._emit_event("agent_failed", {"error": str(e)})
+            return
+
         self.logger.info(f"Agent {self.name} started")
 
         while self.state != AgentState.TERMINATED:

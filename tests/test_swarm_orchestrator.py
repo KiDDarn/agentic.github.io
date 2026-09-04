@@ -107,7 +107,7 @@ async def test_swarm_agent_lifecycle_and_status():
 
     # Start registered agent
     assert await swarm.start_agent(a1.id) is True
-    await asyncio.sleep(0.01)
+    assert a1.state == AgentState.RUNNING
     assert swarm.metrics.active_agents == 1
     # Starting already running agent
     assert await swarm.start_agent(a1.id) is False
@@ -200,3 +200,18 @@ async def test_swarm_start_and_stop_lifecycle():
     await swarm.stop_swarm()
     assert swarm.is_running is False
     assert swarm.monitoring_task.done()
+
+
+@pytest.mark.asyncio
+async def test_swarm_agent_initialize_failure():
+    swarm = SwarmOrchestrator(max_agents=2)
+
+    class FailingInitAgent(MockWorkerAgent):
+        async def initialize(self):
+            raise RuntimeError("Init boom")
+
+    bad_agent = FailingInitAgent(name="BadAgent")
+    await swarm.register_agent(bad_agent)
+    assert await swarm.start_agent(bad_agent.id) is True
+    # The agent should transition to FAILED state gracefully
+    assert bad_agent.state == AgentState.FAILED

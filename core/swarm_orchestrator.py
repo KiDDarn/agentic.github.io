@@ -62,6 +62,8 @@ class SwarmOrchestrator:
         self.metrics.active_agents += 1
 
         self.logger.info(f"Started agent {agent.name}")
+        # Yield to the event loop so the started agent task initializes
+        await asyncio.sleep(0)
         return True
 
     async def stop_agent(self, agent_id: str) -> bool:
