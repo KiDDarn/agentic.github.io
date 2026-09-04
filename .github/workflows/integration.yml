@@ -15,6 +15,14 @@ jobs:
       with:
         python-version: '3.11'
 
+    - name: Cache pip
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt', '**/requirements-integration.txt', '**/constraints.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
     - name: Restore service account from secret
       env:
         SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
@@ -27,10 +35,20 @@ jobs:
         python -m pip install --upgrade pip
         if [ -f constraints.txt ]; then
           pip install -r requirements.txt -c constraints.txt
-        elif [ -f requirements.txt ]; then
-          pip install -r requirements.txt
+          if [ -f requirements-integration.txt ]; then
+            pip install -r requirements-integration.txt -c constraints.txt
+          fi
+        else
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          if [ -f requirements-integration.txt ]; then
+            pip install -r requirements-integration.txt
+          fi
         fi
 
     - name: Run integration tests
       run: |
-        PYTHONPATH=. pytest -q tests/integration
+        pytest -q tests/integration
+      env:
+        PYTHONPATH: ${{ github.workspace }}

@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import aiohttp
 import httpx
 import logging
@@ -181,7 +182,10 @@ class WebSocketAPIClient:
                 message = await self.websocket.recv()
                 data = json.loads(message)
                 for handler in self.message_handlers:
-                    await handler(data)
+                    if inspect.iscoroutinefunction(handler):
+                        await handler(data)
+                    else:
+                        handler(data)
             except Exception as e:
                 self.logger.error(f"WebSocket error: {e}")
                 break

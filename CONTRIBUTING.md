@@ -18,6 +18,9 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt -c constraints.txt
 # Or without constraints:
 pip install -r requirements.txt
+
+# To run integration tests locally, additionally install:
+pip install -r requirements-integration.txt -c constraints.txt
 ```
 
 3. Run the test suite

@@ -3,6 +3,7 @@ from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass
 from enum import Enum
 import asyncio
+import inspect
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -127,6 +128,9 @@ class BaseAgent(ABC):
         if event in self.event_handlers:
             for handler in self.event_handlers[event]:
                 try:
-                    await handler(self, event, data)
+                    if inspect.iscoroutinefunction(handler):
+                        await handler(self, event, data)
+                    else:
+                        handler(self, event, data)
                 except Exception as e:
                     self.logger.error(f"Event handler failed: {e}")

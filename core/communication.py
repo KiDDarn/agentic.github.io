@@ -40,7 +40,10 @@ class Message:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Message':
         data['message_type'] = MessageType(data['message_type'])
-        data['timestamp'] = datetime.fromisoformat(data['timestamp'])
+        dt = datetime.fromisoformat(data['timestamp'])
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        data['timestamp'] = dt
         return cls(**data)
 
 

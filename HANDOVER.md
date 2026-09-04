@@ -2,7 +2,7 @@ HANDOVER — KiDDarn/agentic.github.io
 
 Summary
 -------
-This handover documents work performed to bootstrap tests and CI, merge updates, remove a committed secret, create an on-demand integration workflow, address test deprecation warnings, and add a deterministic dependency lockfile. It also lists remaining follow-up actions that require maintainer intervention.
+This handover documents work performed to bootstrap tests and CI, merge updates, remove a committed secret, create an on-demand integration workflow, address test deprecation warnings, add a deterministic dependency lockfile, resolve missing core/integration dependencies, and fix handler coroutine handling. It also lists remaining follow-up actions that require maintainer intervention.
 
 What was done
 -------------
@@ -29,23 +29,32 @@ What was done
    - Generated pinned transitive dependencies using uv/pip.
    - Updated `.github/workflows/ci.yml` and `.github/workflows/integration.yml` to install with `-c constraints.txt` and cache based on `constraints.txt`.
    - Updated `CONTRIBUTING.md` with instructions for using `constraints.txt`.
-13. Synced local repository branch `main` with `origin/main` and verified test suite runs cleanly (4 passed, 0 warnings).
+13. Synced local repository branch `main` with `origin/main`.
+14. Fixed integration testing, missing dependencies, and handler coroutine handling:
+   - Added missing `psutil` (7.2.2) to `requirements.txt` (required by `core/monitoring.py`).
+   - Added `inspect.iscoroutinefunction` checks to `core/agent_base.py` (`_emit_event`) and `core/api_integration.py` (`WebSocketAPIClient._listen`) to prevent `TypeError` when synchronous handlers are registered.
+   - Added UTC timezone fallback for naive ISO timestamp strings in `Message.from_dict` (`core/communication.py`).
+   - Refactored `tests/integration/create_sheet_test.py` into a proper pytest integration test (`test_create_and_share_sheet`) with assertion checks, unswallowed exceptions, and graceful skipping when credentials or dependencies are missing.
+   - Created `requirements-integration.txt` for `gspread` and `google-auth` and unified all pins in `constraints.txt`.
+   - Updated `.github/workflows/integration.yml` to install `requirements-integration.txt -c constraints.txt` and cache dependencies.
+   - Enhanced `tests/test_core.py` with coverage for sync/async event handlers, websocket client handlers, and timezone awareness. All 9 tests pass with zero warnings on Python 3.11, 3.12, and 3.14.
 
 Files changed/added
 -------------------
-- .github/workflows/ci.yml (updated with constraints.txt support and cache key)
-- .github/workflows/integration.yml (updated with constraints.txt support)
-- requirements.txt (updated pytest-asyncio to 1.4.0)
-- constraints.txt (new: deterministic lockfile)
+- .github/workflows/ci.yml (updated cache key with requirements-integration.txt and constraints.txt)
+- .github/workflows/integration.yml (updated with requirements-integration.txt install and cache)
+- requirements.txt (updated pytest-asyncio to 1.4.0, added psutil==7.2.2)
+- requirements-integration.txt (new: google-auth and gspread)
+- constraints.txt (new/updated: deterministic lockfile for base and integration dependencies)
 - pytest.ini (added pythonpath, asyncio_mode, and asyncio_default_fixture_loop_scope)
-- core/agent_base.py (replaced datetime.utcnow with timezone.utc)
-- core/api_integration.py (replaced datetime.utcnow with timezone.utc)
-- core/communication.py (replaced datetime.utcnow and asyncio.iscoroutinefunction)
+- core/agent_base.py (replaced datetime.utcnow with timezone.utc; supported sync and async event handlers)
+- core/api_integration.py (replaced datetime.utcnow with timezone.utc; supported sync and async ws handlers)
+- core/communication.py (replaced datetime.utcnow and asyncio.iscoroutinefunction; normalized naive timestamps)
 - core/monitoring.py (replaced datetime.utcnow and asyncio.iscoroutinefunction)
-- tests/test_core.py (unit tests)
-- tests/test_async.py (async tests)
-- tests/integration/create_sheet_test.py (moved)
-- CONTRIBUTING.md (updated with constraints.txt and secret instructions)
+- tests/test_core.py (unit and async tests for capabilities, tasks, buses, handlers, metrics, and swarm)
+- tests/test_async.py (async agent lifecycle tests)
+- tests/integration/create_sheet_test.py (refactored to formal pytest integration test)
+- CONTRIBUTING.md (updated with constraints.txt, requirements-integration.txt, and secret instructions)
 - .gitignore (added service_account.json and .venv/)
 - HANDOVER.md (this file)
 
