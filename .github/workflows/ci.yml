@@ -20,7 +20,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt', '**/constraints.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -30,7 +32,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f constraints.txt ]; then
+          pip install -r requirements.txt -c constraints.txt
+        elif [ -f requirements.txt ]; then
+          pip install -r requirements.txt
+        fi
 
     - name: Run tests
       run: |

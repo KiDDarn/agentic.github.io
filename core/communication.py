@@ -1,10 +1,11 @@
 import asyncio
+import inspect
 import json
 import logging
 from typing import Dict, Any, List, Callable, Optional, Set
 from dataclasses import dataclass, asdict
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 import redis.asyncio as redis
 from abc import ABC, abstractmethod
@@ -109,7 +110,7 @@ class RedisMessageBus(MessageBus):
                     if channel in self.subscriptions:
                         for handler in self.subscriptions[channel]:
                             try:
-                                if asyncio.iscoroutinefunction(handler):
+                                if inspect.iscoroutinefunction(handler):
                                     await handler(msg)
                                 else:
                                     handler(msg)
@@ -129,7 +130,7 @@ class InMemoryMessageBus(MessageBus):
         if channel in self.subscriptions:
             for handler in self.subscriptions[channel]:
                 try:
-                    if asyncio.iscoroutinefunction(handler):
+                    if inspect.iscoroutinefunction(handler):
                         await handler(message)
                     else:
                         handler(message)
@@ -182,7 +183,7 @@ class CommunicationProtocol:
             recipient_id=recipient_id,
             message_type=message_type,
             payload=payload,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             correlation_id=correlation_id
         )
         
@@ -260,7 +261,7 @@ class CommunicationProtocol:
         if message.message_type in self.message_handlers:
             for handler in self.message_handlers[message.message_type]:
                 try:
-                    if asyncio.iscoroutinefunction(handler):
+                    if inspect.iscoroutinefunction(handler):
                         await handler(message)
                     else:
                         handler(message)
@@ -273,7 +274,7 @@ class CommunicationProtocol:
             {
                 "agent_id": self.agent_id,
                 "status": status_info,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
         )
 
@@ -300,7 +301,7 @@ class CoordinationService:
         status = message.payload.get("status")
         
         self.active_agents[agent_id] = {
-            "last_seen": datetime.utcnow(),
+            "last_seen": datetime.now(timezone.utc),
             "status": status,
             "sender_id": message.sender_id
         }

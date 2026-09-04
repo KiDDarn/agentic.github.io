@@ -1,9 +1,10 @@
 import asyncio
+import inspect
 import logging
 import psutil
 from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 import uvicorn
@@ -68,7 +69,7 @@ class MetricsCollector:
         network = psutil.net_io_counters()
         
         return SystemMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             cpu_usage=cpu_usage,
             memory_usage=memory.percent,
             disk_usage=disk.percent,
@@ -117,11 +118,11 @@ class AlertManager:
             try:
                 if await rule.evaluate(system_metrics, agent_metrics):
                     alert = Alert(
-                        id=f"alert_{datetime.utcnow().timestamp()}",
+                        id=f"alert_{datetime.now(timezone.utc).timestamp()}",
                         rule_name=rule.name,
                         severity=rule.severity,
                         message=rule.message,
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         resolved=False
                     )
                     
@@ -136,7 +137,7 @@ class AlertManager:
         
         for handler in self.alert_handlers:
             try:
-                if asyncio.iscoroutinefunction(handler):
+                if inspect.iscoroutinefunction(handler):
                     await handler(alert)
                 else:
                     handler(alert)
@@ -150,7 +151,7 @@ class AlertManager:
         for alert in self.active_alerts:
             if alert.id == alert_id:
                 alert.resolved = True
-                alert.resolved_at = datetime.utcnow()
+                alert.resolved_at = datetime.now(timezone.utc)
 
 
 @dataclass

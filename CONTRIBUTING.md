@@ -14,17 +14,20 @@ source .venv/bin/activate  # macOS/Linux
 
 ```bash
 python -m pip install --upgrade pip
+# For deterministic installs matching CI:
+pip install -r requirements.txt -c constraints.txt
+# Or without constraints:
 pip install -r requirements.txt
 ```
 
 3. Run the test suite
 
 ```bash
-# Run only the unit tests discovered under tests/
-PYTHONPATH=. pytest -q
+# Run the unit tests discovered under tests/ (pythonpath is preconfigured in pytest.ini)
+pytest -q
 
 # Run an individual test file
-PYTHONPATH=. pytest tests/test_core.py -q
+pytest tests/test_core.py -q
 ```
 
 4. Async tests

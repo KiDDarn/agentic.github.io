@@ -5,7 +5,7 @@ from enum import Enum
 import asyncio
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class AgentState(Enum):
@@ -35,7 +35,7 @@ class Task:
     
     def __post_init__(self):
         if self.created_at is None:
-            self.created_at = datetime.utcnow()
+            self.created_at = datetime.now(timezone.utc)
 
 
 @dataclass

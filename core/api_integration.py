@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from abc import ABC, abstractmethod
 import json
 from urllib.parse import urljoin
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @dataclass
@@ -100,7 +100,7 @@ class APIClient(ABC):
                     data=response_data,
                     headers=dict(response.headers),
                     endpoint=endpoint_name,
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     error=None if response.status < 400 else str(response_data)
                 )
                 
@@ -111,7 +111,7 @@ class APIClient(ABC):
                 data=None,
                 headers={},
                 endpoint=endpoint_name,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 error=str(e)
             )
 
@@ -232,7 +232,7 @@ class RateLimiter:
     
     async def acquire(self):
         async with self._lock:
-            now = datetime.utcnow().timestamp()
+            now = datetime.now(timezone.utc).timestamp()
             
             self.requests = [
                 req_time for req_time in self.requests
