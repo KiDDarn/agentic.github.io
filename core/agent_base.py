@@ -1,12 +1,12 @@
-from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Callable
-from dataclasses import dataclass
-from enum import Enum
 import asyncio
 import inspect
 import logging
 import uuid
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Callable, Dict, List
 
 
 class AgentState(Enum):
@@ -33,7 +33,7 @@ class Task:
     payload: Dict[str, Any]
     priority: int = 0
     created_at: datetime = None
-    
+
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.now(timezone.utc)
@@ -60,70 +60,65 @@ class BaseAgent(ABC):
         self.task_queue = asyncio.Queue()
         self.api_clients: Dict[str, Any] = {}
         self.event_handlers: Dict[str, List[Callable]] = {}
-        
+
     @abstractmethod
     async def initialize(self) -> None:
         pass
-    
+
     @abstractmethod
     async def execute_task(self, task: Task) -> Dict[str, Any]:
         pass
-    
+
     @abstractmethod
     async def cleanup(self) -> None:
         pass
-    
+
     async def start(self):
         self.state = AgentState.RUNNING
         await self.initialize()
         self.logger.info(f"Agent {self.name} started")
-        
-        while self.state == AgentState.RUNNING:
+
+        while self.state != AgentState.TERMINATED:
+            if self.state == AgentState.PAUSED:
+                await asyncio.sleep(0.05)
+                continue
             try:
-                task = await asyncio.wait_for(
-                    self.task_queue.get(), timeout=1.0
-                )
+                task = await asyncio.wait_for(self.task_queue.get(), timeout=1.0)
                 result = await self.execute_task(task)
                 self.metrics.tasks_completed += 1
-                await self._emit_event("task_completed", {
-                    "task_id": task.id,
-                    "result": result
-                })
+                await self._emit_event("task_completed", {"task_id": task.id, "result": result})
             except asyncio.TimeoutError:
                 continue
             except Exception as e:
                 self.metrics.tasks_failed += 1
                 self.logger.error(f"Task execution failed: {e}")
-                await self._emit_event("task_failed", {
-                    "task_id": getattr(task, 'id', None),
-                    "error": str(e)
-                })
-    
+                await self._emit_event("task_failed", {"task_id": getattr(task, "id", None), "error": str(e)})
+
     async def stop(self):
         self.state = AgentState.TERMINATED
         await self.cleanup()
         self.logger.info(f"Agent {self.name} stopped")
-    
+
     async def pause(self):
         self.state = AgentState.PAUSED
-    
+
     async def resume(self):
         self.state = AgentState.RUNNING
-    
+
     async def add_task(self, task: Task):
         await self.task_queue.put(task)
-    
+
     def register_capability(self, capability: AgentCapability):
         self.capabilities.append(capability)
-    
+
     def add_api_client(self, name: str, client: Any):
         self.api_clients[name] = client
-    
+
     def register_event_handler(self, event: str, handler: Callable):
         if event not in self.event_handlers:
             self.event_handlers[event] = []
         self.event_handlers[event].append(handler)
-    
+
     async def _emit_event(self, event: str, data: Dict[str, Any]):
         if event in self.event_handlers:
             for handler in self.event_handlers[event]:

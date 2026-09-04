@@ -38,6 +38,11 @@ jobs:
           pip install -r requirements.txt
         fi
 
+    - name: Run linting and format checks
+      run: |
+        ruff check core tests agentic_os.py
+        ruff format --check core tests agentic_os.py
+
     - name: Run tests
       run: |
         pytest -q

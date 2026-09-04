@@ -38,23 +38,63 @@ What was done
    - Created `requirements-integration.txt` for `gspread` and `google-auth` and unified all pins in `constraints.txt`.
    - Updated `.github/workflows/integration.yml` to install `requirements-integration.txt -c constraints.txt` and cache dependencies.
    - Enhanced `tests/test_core.py` with coverage for sync/async event handlers, websocket client handlers, and timezone awareness. All 9 tests pass with zero warnings on Python 3.11, 3.12, and 3.14.
+15. Audited and expanded unit test suite across all core modules (suite grew from 9 to 43 tests):
+   - Added `tests/test_parallel_engine.py`: 10 comprehensive tests for `TaskScheduler` (priority ordering, dependencies resolution), `WorkerPool` (async and thread tasks, unsupported mode errors), and `ParallelExecutionEngine` (async tasks, thread execution, timeouts, exception handling, batch submissions, parallel mapping, pipeline execution, and status reporting).
+   - Added `tests/test_swarm_orchestrator.py`: 5 comprehensive tests for `TaskRouter`, `LoadBalancer`, agent registration/duplicates/limits, full agent lifecycle and status queries, and task submission and broadcasting.
+   - Added `tests/test_communication.py`: 5 comprehensive tests for `Message` serialization/roundtrip with timezone awareness, `InMemoryMessageBus` handler error isolation and unsubscribe, `CommunicationProtocol` request-response correlation and timeouts, and `CoordinationService` heartbeats, agent status, and task assignments.
+   - Added `tests/test_api_integration.py`: 6 comprehensive tests for `RateLimiter` non-deadlocking delay, `HTTPAPIClient` authentication and calling endpoints (success, error response, connection error, unknown endpoints), `GraphQLAPIClient` queries, `APIRegistry`, `APIStackManager`, and `WebSocketAPIClient`.
+   - Added `tests/test_monitoring.py`: 5 comprehensive tests for `SystemMetrics`, `MetricsCollector` lifecycle and limits, `CPUAlertRule`, `MemoryAlertRule`, `AgentFailureAlertRule`, `AlertManager` active alerts and resolution, and `MonitoringDashboard` FastAPI routes.
+   - Added `tests/test_agent_base.py`: 3 tests for capability and client registration, state transitions (pause/resume/stop), and task execution event emissions (`task_completed`, `task_failed`) with metric updates.
+16. Codebase Hardening & Bug Fixes:
+   - Fixed fatal deadlock bug in `RateLimiter.acquire()` (`core/api_integration.py`) caused by holding `asyncio.Lock` during recursive calls.
+   - Fixed task dependency race condition in `ParallelExecutionEngine._process_tasks()` / `_handle_task_completion()` (`core/parallel_engine.py`) and made thread pool task completions non-blocking using `asyncio.wrap_future()`.
+   - Guarded `CommunicationProtocol._setup_default_channels()` (`core/communication.py`) against `RuntimeError` when instantiated outside an active event loop.
+   - Replaced bare `except:` clauses with `except Exception:`.
+17. Linting and Code Formatting Checks:
+   - Added `ruff==0.16.6` to `requirements.txt` and recompiled `constraints.txt` using uv.
+   - Created `pyproject.toml` with `ruff` configuration (pycodestyle `E`/`W`, pyflakes `F`, isort `I`, line length 120).
+   - Fixed all linting issues across `core/`, `tests/`, and `agentic_os.py`.
+   - Added lint and format checks (`ruff check core tests agentic_os.py` and `ruff format --check core tests agentic_os.py`) to `.github/workflows/ci.yml`.
+   - Updated `CONTRIBUTING.md` with ruff commands.
+18. Hardening & Reviewer Audit Fixes (suite expanded to 54 tests):
+   - Fixed `TypeError` in `AgenticOS` instantiation by supporting `max_threads` parameter alias in `ParallelExecutionEngine`.
+   - Fixed infinite hang in `SwarmOrchestrator.start_swarm()` by running agent monitoring asynchronously rather than blocking caller execution, and canceling it on `stop_swarm()`.
+   - Fixed permanent task loop death on `pause()` in `BaseAgent` by keeping the task loop active in `PAUSED` state and only terminating when `TERMINATED`.
+   - Fixed `UnboundLocalError` on cancellation and task ID collision in `ParallelExecutionEngine.pipeline_execution()`, ensuring subsequent pipeline runs do not return stale cached results or mutate caller configurations.
+   - Fixed `ExecutionMode.ASYNC` ignoring `timeout` in `submit_task()` by applying `asyncio.wait_for()` and returning `status="timeout"`.
+   - Fixed 1.0-second event loop freeze in `MetricsCollector._collect_system_metrics()` by replacing `psutil.cpu_percent(interval=1)` with non-blocking `interval=None`.
+   - Fixed race conditions and duplicate subscriptions in `CommunicationProtocol`, made `initialize()` idempotent, and added `cleanup()` and selective `unsubscribe()` by handler.
+   - Fixed `WebSocketAPIClient.disconnect()` to cancel the listening task and reset `self.websocket = None`.
+   - Replaced deprecated `asyncio.get_event_loop().time()` with `time.time()` in `agentic_os.py`.
+   - Added `tests/test_agentic_os.py` (4 tests) covering `AgenticOS` lifecycle, custom agents, task submission, and parallel tasks.
+   - Expanded tests across `test_parallel_engine.py`, `test_swarm_orchestrator.py`, `test_communication.py`, and `test_agent_base.py`.
 
 Files changed/added
 -------------------
-- .github/workflows/ci.yml (updated cache key with requirements-integration.txt and constraints.txt)
+- .github/workflows/ci.yml (added ruff lint and format check steps)
 - .github/workflows/integration.yml (updated with requirements-integration.txt install and cache)
-- requirements.txt (updated pytest-asyncio to 1.4.0, added psutil==7.2.2)
-- requirements-integration.txt (new: google-auth and gspread)
-- constraints.txt (new/updated: deterministic lockfile for base and integration dependencies)
-- pytest.ini (added pythonpath, asyncio_mode, and asyncio_default_fixture_loop_scope)
+- requirements.txt (added ruff==0.16.6, psutil==7.2.2, pytest-asyncio==1.4.0)
+- requirements-integration.txt (google-auth and gspread)
+- constraints.txt (updated lockfile including ruff and all transitive dependencies)
+- pyproject.toml (new: ruff configuration)
+- pytest.ini (pythonpath, asyncio_mode, and asyncio_default_fixture_loop_scope)
 - core/agent_base.py (replaced datetime.utcnow with timezone.utc; supported sync and async event handlers)
-- core/api_integration.py (replaced datetime.utcnow with timezone.utc; supported sync and async ws handlers)
-- core/communication.py (replaced datetime.utcnow and asyncio.iscoroutinefunction; normalized naive timestamps)
-- core/monitoring.py (replaced datetime.utcnow and asyncio.iscoroutinefunction)
+- core/api_integration.py (fixed RateLimiter deadlock, replaced bare except, supported sync and async ws handlers)
+- core/communication.py (guarded event loop in protocol, replaced datetime.utcnow, normalized naive timestamps)
+- core/monitoring.py (replaced bare except, replaced datetime.utcnow and asyncio.iscoroutinefunction)
+- core/parallel_engine.py (non-blocking thread futures, fixed dependency completion race condition)
+- agentic_os.py (unused variable fixes and formatted)
 - tests/test_core.py (unit and async tests for capabilities, tasks, buses, handlers, metrics, and swarm)
 - tests/test_async.py (async agent lifecycle tests)
-- tests/integration/create_sheet_test.py (refactored to formal pytest integration test)
-- CONTRIBUTING.md (updated with constraints.txt, requirements-integration.txt, and secret instructions)
+- tests/test_parallel_engine.py (new: comprehensive unit tests for scheduler, pool, and engine)
+- tests/test_swarm_orchestrator.py (new: router, balancer, lifecycle, and broadcasting tests)
+- tests/test_communication.py (new: protocol, coordination service, request/response, and heartbeat tests)
+- tests/test_api_integration.py (new: rate limiter, HTTP client, GraphQL client, registry, and stack manager tests)
+- tests/test_monitoring.py (new: metrics collector, alert rules/manager, and FastAPI dashboard endpoints)
+- tests/test_agent_base.py (new: capability, state transitions, task execution, and metrics tests)
+- tests/test_agentic_os.py (new: AgenticOS lifecycle, custom agent, and parallel execution tests)
+- tests/integration/create_sheet_test.py (refactored to formal pytest integration test with noqa)
+- CONTRIBUTING.md (updated with constraints.txt, ruff linting, and secret instructions)
 - .gitignore (added service_account.json and .venv/)
 - HANDOVER.md (this file)
 

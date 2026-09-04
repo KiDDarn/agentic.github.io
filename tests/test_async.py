@@ -1,8 +1,8 @@
 import asyncio
+
 import pytest
 
-from core.agent_base import BaseAgent, Task
-from core.agent_base import AgentState
+from core.agent_base import AgentState, BaseAgent, Task
 
 
 class DummyAsyncAgent(BaseAgent):

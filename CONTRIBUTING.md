@@ -46,6 +46,24 @@ This project uses pytest-asyncio for async tests. The installed requirements inc
 
 You can run the same matrix locally using tox or by running multiple interpreters. The CI caches pip packages to speed up workflow runs.
 
+7. Linting and Code Formatting
+
+We use [ruff](https://github.com/astral-sh/ruff) for fast linting and code formatting:
+
+```bash
+# Check code cleanliness and imports
+ruff check core tests agentic_os.py
+
+# Auto-fix lint issues where possible
+ruff check --fix core tests agentic_os.py
+
+# Check formatting
+ruff format --check core tests agentic_os.py
+
+# Auto-format files
+ruff format core tests agentic_os.py
+```
+
 Questions? Open an issue or PR with details.
 
 ## Secrets & Integration tests

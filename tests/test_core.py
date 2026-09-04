@@ -1,13 +1,12 @@
-import asyncio
 import json
-from datetime import datetime, timezone
+from datetime import timezone
 from unittest.mock import AsyncMock
 
-from core.agent_base import AgentCapability, Task, BaseAgent
-from core.communication import Message, MessageType, InMemoryMessageBus
-from core.swarm_orchestrator import SwarmOrchestrator
+from core.agent_base import AgentCapability, BaseAgent, Task
 from core.api_integration import WebSocketAPIClient
-from core.monitoring import MetricsCollector, AlertManager, AlertRule, Alert
+from core.communication import InMemoryMessageBus, Message, MessageType
+from core.monitoring import AlertManager, AlertRule, MetricsCollector
+from core.swarm_orchestrator import SwarmOrchestrator
 
 
 def test_agent_capability_init():
@@ -64,7 +63,7 @@ def test_message_from_dict_naive_iso_timestamp():
         "message_type": "event",
         "payload": {},
         "timestamp": "2026-09-04T12:00:00",
-        "correlation_id": None
+        "correlation_id": None,
     }
     restored = Message.from_dict(raw)
     assert restored.timestamp.tzinfo == timezone.utc
@@ -114,10 +113,7 @@ async def test_websocket_client_sync_and_async_handlers():
 
     # Mock websocket with one message then None to exit _listen
     mock_ws = AsyncMock()
-    mock_ws.recv.side_effect = [
-        json.dumps({"type": "hello"}),
-        Exception("disconnect")
-    ]
+    mock_ws.recv.side_effect = [json.dumps({"type": "hello"}), Exception("disconnect")]
     client.websocket = mock_ws
 
     await client._listen()
